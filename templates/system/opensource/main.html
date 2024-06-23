@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>开源项目</title>
+    {% include 'system/common/header.html' %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='system/admin/css/other/user.css') }}"/>
+</head>
+<body class="pear-container">
+{# 查询表单 #}
+<div class="layui-card">
+    <div class="layui-card-body">
+        <form class="layui-form" action="" lay-filter="opensource-query-form">
+            <div class="layui-form-item">
+                <label class="layui-form-label">编程语言</label>
+                <div class="layui-input-inline">
+                    <input type="text" name="language" placeholder="" class="layui-input">
+                </div>
+
+                <button class="pear-btn pear-btn-md pear-btn-primary" lay-submit lay-filter="opensource-query">
+                    <i class="layui-icon layui-icon-search"></i>
+                    查询
+                </button>
+                <button type="reset" class="pear-btn pear-btn-md">
+                    <i class="layui-icon layui-icon-refresh"></i>
+                    重置
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+<div class="user-left user-collasped">
+    <div class="layui-card">
+        <div class="layui-card-body">
+            <div class="button button-primary user-group" user-group=""> 全 部 用 户</div>
+            <div class="button button-default user-group" user-group="-1"> 默 认 分 组</div>
+            <div style="overflow: auto">
+                <ul id="dept-tree" class="dept-tree" data-id="0"></ul>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="user-main user-collasped">
+    <div class="layui-card">
+        <div class="layui-card-body">
+            <table id="opensource-table" lay-filter="opensource-table"></table>
+        </div>
+    </div>
+</div>
+</body>
+
+{% include 'system/common/footer.html' %}
+
+<script>
+    layui.use(['table', 'dtree', 'form', 'jquery', 'popup', 'common'], function () {
+        let table = layui.table
+        let form = layui.form
+        let $ = layui.jquery
+        let dtree = layui.dtree
+        let popup = layui.popup
+        let common = layui.common
+        let MODULE_PATH = "{{ url_for('system.opensource.main') }}"
+        // 表格数据
+        let cols = [
+            [
+                {title: '项目名称', field: 'project_name', align: 'center', width: 300},
+                {title: 'language', field: 'language', align: 'center', width: 200},
+                {title: 'watch', field: 'watch', align: 'center', width: 200},
+                {title: 'stars', field: 'stars', align: 'center', width: 200},
+                {title: 'fork', field: 'fork', align: 'center', width: 200},
+            ]
+        ]
+
+        // 渲染表格数据
+        table.render({
+            elem: '#opensource-table',
+            url: MODULE_PATH + 'data',
+            page: true,
+            cols: cols,
+            skin: 'line',
+            height: 'full-148',
+            toolbar: '#user-toolbar', /*工具栏*/
+            text: {none: '暂无人员信息'},
+            defaultToolbar: ['filter', 'print', 'exports'] /*默认工具栏*/
+        })
+
+        // 公司部门树状图菜单
+        dtree.render({
+            elem: '#dept-tree',
+            method: 'get',
+            url: '/system/dept/tree',
+            dataFormat: 'list',
+            line: true,
+            skin: 'laySimple',
+            icon: '-1',
+            response: {treeId: 'id', parentId: 'parent_id', title: 'dept_name'},
+        })
+
+        // 菜单栏渲染
+        dtree.on('node(\'dept-tree\')', function (obj) {
+            let field = form.val('opensource-query-form')
+            field.deptId = obj.param.nodeId
+            window.refresh(field)
+        })
+
+        //
+        $('.user-group').click(function () {
+            let group = $(this).attr('user-group')
+            let field = form.val('opensource-query-form')
+            if (group === '-1') {
+                field.deptId = group
+                $(this).removeClass('button-default')
+                $(this).prev().removeClass('button-primary')
+                $(this).prev().addClass('button-default')
+                $(this).addClass('button-primary')
+            } else {
+                field.deptId = group
+                $(this).removeClass('button-default')
+                $(this).next().removeClass('button-primary')
+                $(this).next().addClass('button-default')
+                $(this).addClass('button-primary')
+            }
+            window.refresh(field)
+        })
+
+        table.on('tool(opensource-table)', function (obj) {
+            if (obj.event === 'remove') {
+                window.remove(obj)
+            } else if (obj.event === 'edit') {
+                window.edit(obj)
+            }
+        })
+
+        table.on('toolbar(opensource-table)', function (obj) {
+            if (obj.event === 'add') {
+                window.add()
+            } else if (obj.event === 'refresh') {
+                window.refresh()
+            } else if (obj.event === 'batchRemove') {
+                window.batchRemove(obj)
+            } else if (obj.event === 'collasped') {
+                $('.user-left').toggleClass('user-collasped')
+                $('.user-main').toggleClass('user-collasped')
+                table.resize()
+            }
+        })
+
+        form.on('submit(opensource-query)', function (data) {
+            window.refresh(data.field)
+            return false
+        })
+
+
+
+        window.refresh = function (param) {
+            table.reload('opensource-table', {where: param})
+        }
+    })
+</script>
+</html>
